@@ -1,0 +1,42 @@
+import { Text, StyleSheet, View, Button } from "react-native"
+import React, { useState } from 'react'
+
+
+const App = () => {
+  const [name, setName] = useState("Name")
+
+const[toggle,setToggle]=useState(true)
+let batch ="react native"
+
+const UpdateValue=()=>{
+  setName('Hello')
+}
+
+  return (
+    <View style={{ alignItems: 'center', flex: 1, justifyContent: "center" }}>
+
+      <Text>PROPS (Parent Component)</Text>
+        {
+          toggle === true? <Text style={{fontWeight:"bold",color:'blue',fontSize:30}}> {name} </Text>:null
+        }
+      <Button title='Show Name' onPress={() => UpdateValue()} />
+      <Button title='Toggle' onPress={() => setToggle(!toggle)} />
+      <Child name={name} batch = {batch}/>
+
+    </View>
+  )
+}
+
+const Child =(props)=>{
+  console.log('child compo',props.name)
+  return(
+    <View style={{alignItems:'center',justifyContent:'center',backgroundColor:'yellow'}}>
+      <Text>Child Component</Text>
+      <Text>{props.name}</Text>
+      <Text>{props.batch}</Text>
+    </View>
+  )
+}
+
+
+export default App

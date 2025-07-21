@@ -1,0 +1,150 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView,Image,Route } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
+import Signup from './Signup';
+
+export default function Profile(route) {
+    const pic =route.params.profilePic
+
+
+    const handleImagePick = () => {
+       {
+            const uri = response.assets[0].uri;
+            setProfilePic(uri);
+        };
+    };
+
+    return (
+    <ScrollView style={styles.container}>
+      <View style={styles.profileContainer}>
+                    <Image
+                      source={pic ? { uri: pic } : require('../../assets/pimg.png')}
+                      style={styles.profileImage}
+                    />
+
+                  
+        <Text style={styles.username}>Admin</Text>
+        <View style={styles.taskStatusContainer}>
+          <TouchableOpacity>
+          <View style={styles.taskBox}> 
+            <Text style={styles.taskText}>0 Task Left</Text>
+          </View>
+          </TouchableOpacity>
+          <View style={styles.taskBox}>
+            <Text style={styles.taskText}>0 Task done</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <MenuItem icon="account-edit" label="Change account name" />
+        <MenuItem icon="diamond-stone" label="Upgrade to premium" />
+      </View>
+
+      <View style={styles.section}>
+        <MenuItem icon="information-outline" label="About us" />
+        <MenuItem icon="message-question-outline" label="Help & Feedback" />
+        <MenuItem icon="thumb-up-outline" label="Support Us" />
+      </View>
+
+      <View style={styles.section}>
+        <MenuItem icon="logout" label="Logout" red />
+        <Text style={styles.accountDeletion}>Account Deletion</Text>
+        <TouchableOpacity style={styles.deleteButton}>
+          <Text style={styles.deleteText}>Delete Account</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView >
+  );
+}
+
+const MenuItem = ({ icon, label, red }) => (
+    <TouchableOpacity style={styles.menuItem}>
+        <Icon name={icon} size={20} color={red ? 'red' : 'white'} />
+        <Text style={[styles.menuText, red && { color: 'red' }]}>{label}</Text>
+    </TouchableOpacity>
+);
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+        padding: 20,
+    },
+    profileSection: {
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    avatar: {
+        backgroundColor: 'blue',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    profileContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: 'white',
+  },
+  uploadIcon: {
+    marginTop: 10,
+  },
+    avatarText: {
+        color: '#fff',
+        fontSize: 32,
+        fontWeight: 'bold',
+    },
+    username: {
+        color: '#fff',
+        fontSize: 18,
+        marginVertical: 10,
+    },
+    taskStatusContainer: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 10,
+    },
+    taskBox: {
+        backgroundColor: '#333',
+        padding: 10,
+        borderRadius: 6,
+    },
+    taskText: {
+        color: '#fff',
+    },
+    section: {
+        marginTop: 30,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    menuText: {
+        color: '#fff',
+        marginLeft: 10,
+        fontSize: 16,
+    },
+    accountDeletion: {
+        color: 'red',
+        marginTop: 20,
+        fontWeight: 'bold',
+    },
+    deleteButton: {
+        paddingVertical: 10,
+    },
+    deleteText: {
+        color: 'red',
+        fontSize: 16,
+    },
+});

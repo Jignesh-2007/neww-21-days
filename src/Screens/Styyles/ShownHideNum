@@ -1,0 +1,54 @@
+import { Text, StyleSheet, View, Button } from "react-native"
+import React, { useState } from 'react'
+
+/*const App = () => 
+{
+  const [name, setName] = useState("Nam")
+
+const UpdateVa = () => 
+{
+  if (nam)
+  {
+    setName()
+  }
+  else
+  {
+    setName("Name")
+  }
+}
+
+  return (
+    <View style={{ alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+
+      <Text style={{ fontWeight: "bold", fontSize: 25, color: 'red', lineHeight: 80 }}>{name}</Text>
+      <Button title='Hide/Show Name' onPress={() => UpdateVa()} />
+
+    </View>
+  )
+} */
+
+const App = () => {
+  const [name, setName] = useState("Name")
+
+  const UpdateValue = () => {
+    setName("Name")
+  }
+  const Updatevalu = () => {
+    if (name) {
+      setName()
+    }
+  }
+
+  return (
+    <View style={{ alignItems: 'center', flex: 1, justifyContent: "center" }}>
+
+      <Text style={{ fontWeight: "bold", fontSize: 25, color: 'red', lineHeight: 80 }}>{name}</Text>
+      <Button title='Show Name' onPress={() => UpdateValue()} />
+      <Button title='Hide Name' onPress={() => Updatevalu()} />
+
+    </View>
+  )
+}
+
+
+export default App

@@ -1,0 +1,96 @@
+import React, { useState } from 'react';
+import { View, TextInput, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import Profile from './src/Pages/Profile';
+import Signup from './src/Pages/Signup';
+import HomeScreen from './src/Pages/HomeScreen';
+import LoginScreen from './src/Pages/LoginScreen';
+import About from './src/Pages/About';
+import Support from './src/Pages/Support';
+import Focus from './src/Pages/Focus';
+import Newtask from './src/Pages/Newtask';
+import Progress from './src/Pages/Progress';
+import Ai from './src/Pages/Ai';
+
+const Stack = createNativeStackNavigator();
+
+const App = () => {
+  return (
+<Ai/>
+    // <NavigationContainer>
+    //   <Stack.Navigator>
+    //     <Stack.Screen name="LoginScreen" component={LoginScreen} options={{
+    //       title: 'WELCOME',
+    //       headerTitleAlign: 'center',
+    //       headerShown: false,
+
+    //       headerStyle: {
+    //         backgroundColor: 'black',
+    //         shadowColor: 'grey',
+    //         headerShown: false,
+    //         shadowOpacity: 0.5,
+
+
+    //       },
+    //       headerTintColor: 'white',
+    //       headerTitleStyle: {
+    //         fontWeight: 'bold',
+    //         fontSize: 25,
+    //         color: 'white',
+    //         headerShown: false,
+    //       }
+    //     }} />
+    //     <Stack.Screen name="Signup" component={Signup} options={{
+    //       headerShown: false
+    //     }} />
+    //     <Stack.Screen name="Profile" component={Profile} options={{
+
+    //       title: 'Welcome',
+    //       headerShown: false
+    //     }} />
+
+    //     <Stack.Screen name="HomeScreen" component={HomeScreen} options={{
+    //       headerRight: () => (
+    //         <TouchableOpacity onPress={() => alert('Button Pressed!')} style={{ marginRight: 10 }}>
+    //           <Ionicons name="notifications" size={24} color="#fff" />
+    //         </TouchableOpacity>
+    //       ),
+    //       headerShown: false
+
+
+
+    //     }} />
+    //     <Stack.Screen name="Newtask" component={Newtask} options={{
+    //       headerShown: false
+    //     }} />
+    //     <Stack.Screen name="About" component={About} options={{
+    //       headerShown: false
+    //     }} />
+    //     <Stack.Screen name="Progress" component={Progress} options={{
+    //       headerShown: false
+    //     }} />
+    //     <Stack.Screen name="Support" component={Support} options={{
+    //       headerShown: false
+    //     }} />
+    //     <Stack.Screen name="Focus" component={Focus} options={{
+    //       headerShown: false
+    //     }} />
+    //   </Stack.Navigator>
+    // </NavigationContainer>
+
+  )
+
+}
+
+
+export default App;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1
+  }
+
+})
