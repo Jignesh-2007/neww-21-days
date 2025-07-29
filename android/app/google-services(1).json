@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "109526785791",
+    "firebase_url": "https://days-6e5e9-default-rtdb.firebaseio.com",
+    "project_id": "days-6e5e9",
+    "storage_bucket": "days-6e5e9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109526785791:android:d126a4b419902f90bcf6ca",
+        "android_client_info": {
+          "package_name": "com.myapps"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOnOUjoBK4S66NRFuf7J0osuuX6zKitHg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

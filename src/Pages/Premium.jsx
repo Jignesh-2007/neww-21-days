@@ -21,7 +21,7 @@ const PLANS = [
     id: 'yearly',
     title: 'Yearly Plan',
     duration: '1 year full access',
-    price: 1200,
+    price: 1000,
     originalPrice: 2400,
     discountPercent: 50,
     features: [

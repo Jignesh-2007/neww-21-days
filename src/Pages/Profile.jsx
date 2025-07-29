@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,15 @@ import {
   Modal,
   Pressable,
   SafeAreaView,
+  Image, // Make sure Image is imported
+  ActivityIndicator, // To show a loading spinner
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { getAuth, signOut } from '@react-native-firebase/auth'; // Import auth functions
+import axios from 'axios'; // Import axios for GET request
+
+// This part of your code (PLANS, PlanCard, PremiumModal) remains the same.
+// ... (PLANS, PlanCard, and PremiumModal components go here, I've omitted them for brevity but they should be in your file)
 
 const PLANS = [
   {
@@ -109,25 +116,72 @@ const PremiumModal = ({ visible, onClose }) => (
 
 const Profile = ({ navigation }) => {
   const [premiumVisible, setPremiumVisible] = useState(false);
+  
+  // --- NEW: State for storing user data and loading status ---
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const navigateToAbout = () => {
-    navigation.navigate('About');
+  // --- NEW: useEffect to fetch data when the screen loads ---
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (currentUser) {
+        const userId = currentUser.uid;
+        const URL = `https://days-6e5e9-default-rtdb.firebaseio.com/USer/${userId}.json`;
+        
+        try {
+          const response = await axios.get(URL);
+          if (response.data) {
+            setUserData(response.data); // Save fetched data to state
+          }
+        } catch (error) {
+          console.error("Failed to fetch user data:", error);
+          // Optionally, show an error message to the user
+        }
+      }
+      setLoading(false); // Stop loading once done
+    };
+
+    fetchUserData();
+  }, []); // The empty array [] means this effect runs only once
+
+  const handleLogout = () => {
+    const auth = getAuth();
+    signOut(auth)
+      .then(() => navigation.replace('LoginScreen'))
+      .catch(error => console.error("Logout error", error));
   };
-  const navigateToSupport = () => {
-    navigation.navigate('Support');
-  };
-  const navigateToLogin = () => {
-    navigation.navigate('LoginScreen');
-  };
+  
+  // --- NEW: Show a loading spinner while data is being fetched ---
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={NEON_BLUE} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // --- Use fetched data, with fallbacks for safety ---
+  const username = userData?.username || 'Guest';
+  const profilePicUrl = userData?.profilePicUrl;
+  const avatarLetter = username.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            {profilePicUrl ? (
+              <Image source={{ uri: profilePicUrl }} style={styles.profileImage} />
+            ) : (
+              <Text style={styles.avatarText}>{avatarLetter}</Text>
+            )}
           </View>
-          <Text style={styles.username}>Admin</Text>
+          <Text style={styles.username}>{username}</Text>
           <View style={styles.taskStatusContainer}>
             <View style={styles.taskBox}>
               <Text style={styles.taskText}>0 Task Left</Text>
@@ -143,14 +197,14 @@ const Profile = ({ navigation }) => {
           <TouchableOpacity onPress={() => setPremiumVisible(true)}>
             <MenuItem icon="diamond-stone" label="Upgrade to premium" isPremium />
           </TouchableOpacity>
-          <TouchableOpacity onPress={navigateToAbout}>
+          <TouchableOpacity onPress={() => navigation.navigate('About')}>
             <MenuItem icon="information-outline" label="About us" />
           </TouchableOpacity>
           <MenuItem icon="message-question-outline" label="Help & Feedback" />
-          <TouchableOpacity onPress={navigateToSupport}>
+          <TouchableOpacity onPress={() => navigation.navigate('Support')}>
             <MenuItem icon="thumb-up-outline" label="Support Us" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={navigateToLogin}>
+          <TouchableOpacity onPress={handleLogout}>
             <MenuItem icon="logout" label="Logout" isLogout />
           </TouchableOpacity>
         </View>
@@ -163,6 +217,7 @@ const Profile = ({ navigation }) => {
   );
 };
 
+// MenuItem component remains the same
 const MenuItem = ({ icon, label, isPremium, isLogout }) => {
   const color = isLogout ? '#ff3b30' : isPremium ? '#33ffff' : '#fff';
   const textStyles = [
@@ -179,9 +234,11 @@ const MenuItem = ({ icon, label, isPremium, isLogout }) => {
   );
 };
 
+
 const NEON_BLUE = '#33ffff';
 const DARK_BG = '#0d1117';
 
+// Styles remain the same, with one addition for the profile image
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -209,6 +266,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 15,
     elevation: 20,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     color: NEON_BLUE,
