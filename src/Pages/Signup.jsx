@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { launchImageLibrary } from 'react-native-image-picker';
 import {
   StyleSheet,
   Text,
@@ -13,21 +12,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { getAuth, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
+} from 'react-native'; // 'styles' has been correctly removed from this list.
+import { launchImageLibrary } from 'react-native-image-picker';
+
+// --- Firebase Imports ---
+import auth from '@react-native-firebase/auth';
 import storage from '@react-native-firebase/storage';
-import axios from 'axios';
-import HomeScreen from './HomeScreen';
+import database from '@react-native-firebase/database';
 
 const Signup = ({ navigation }) => {
-
-  
-
   const [form, setForm] = useState({ email: '', password: '', profilePic: null });
   const [loading, setLoading] = useState(false);
-
-  // Your Firebase Realtime Database URL
-  const URL = 'https://days-6e5e9-default-rtdb.firebaseio.com/';
 
   const handleInput = (key, value) => {
     setForm({ ...form, [key]: value });
@@ -66,21 +61,17 @@ const Signup = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const authInstance = getAuth();
-      const userCredential = await createUserWithEmailAndPassword(authInstance, form.email, form.password);
+      const userCredential = await auth().createUserWithEmailAndPassword(form.email, form.password);
       const userId = userCredential.user.uid;
 
-      // --- FIX: The variable is now declared only ONCE ---
       let imageURL = null;
       if (form.profilePic) {
         imageURL = await uploadImageToStorage(form.profilePic, userId);
       }
 
-      // Generate a username from the email
       const username = form.email.split('@')[0];
 
-      // Prepare the complete user data object
-      const dataToSave = {
+      const userProfileData = {
         userId: userId,
         email: form.email,
         username: username,
@@ -88,13 +79,10 @@ const Signup = ({ navigation }) => {
         createdAt: new Date().toISOString(),
       };
 
-      // Save the user data to Firebase Realtime Database
-      await axios.put(`${URL}/USer/${userId}.json`, dataToSave);
+      await database().ref(`/users/${userId}/profile`).set(userProfileData);
 
       Alert.alert('Success ✅', 'Signup successful!');
-
-      // Navigate to the Home screen with the new user's data
-      navigation.replace('HomeScreen', { userData: dataToSave });
+      navigation.replace('HomeScreen', { userData: userProfileData });
 
     } catch (error) {
       let errorMessage = 'An error occurred during signup.';
@@ -161,6 +149,7 @@ const Signup = ({ navigation }) => {
   );
 };
 
+// --- Complete Styles Definition ---
 const styles = StyleSheet.create({
   main: { flex: 1, alignItems: 'center', padding: 20, justifyContent: 'center' },
   heading: { fontSize: 32, color: 'white', marginTop: 20 },
