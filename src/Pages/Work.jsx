@@ -7,15 +7,16 @@ import {
   StatusBar,
   FlatList,
   TouchableOpacity,
-  Alert
+  Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 
-// --- FIX 1: Rename component to WorkScreen ---
 const WorkScreen = () => {
   const [workTasks, setWorkTasks] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   useEffect(() => {
     const authSubscriber = auth().onAuthStateChanged((user) => {
@@ -32,7 +33,6 @@ const WorkScreen = () => {
               id: key,
               ...tasksData[key],
             })).sort((a, b) => b.createdAt - a.createdAt);
-            
             setWorkTasks(filteredWorkTasks);
           } else {
             setWorkTasks([]);
@@ -47,7 +47,7 @@ const WorkScreen = () => {
 
     return authSubscriber;
   }, []);
-  
+
   const toggleTaskCompletion = (taskId, currentStatus) => {
     const user = auth().currentUser;
     if (user) {
@@ -55,18 +55,18 @@ const WorkScreen = () => {
     }
   };
 
-  const handleDeleteTask = (taskId, taskTitle) => {
+  const confirmDeleteTask = (taskId, taskTitle) => {
+    setTaskToDelete({ id: taskId, title: taskTitle });
+    setShowModal(true);
+  };
+
+  const deleteTask = () => {
     const user = auth().currentUser;
-    if (user) {
-      Alert.alert("Delete Task", `Are you sure you want to delete "${taskTitle}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          onPress: () => database().ref(`/users/${user.uid}/tasks/${taskId}`).remove(),
-          style: "destructive"
-        }
-      ]);
+    if (user && taskToDelete) {
+      database().ref(`/users/${user.uid}/tasks/${taskToDelete.id}`).remove();
     }
+    setShowModal(false);
+    setTaskToDelete(null);
   };
 
   const renderTask = ({ item }) => (
@@ -84,14 +84,14 @@ const WorkScreen = () => {
           <Text style={[styles.taskText, item.completed && styles.completedTaskText]}>
             {item.title}
           </Text>
-           <Text style={styles.taskDate}>
+          <Text style={styles.taskDate}>
             {item.dateTime ? new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No date'}
           </Text>
         </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={() => handleDeleteTask(item.id, item.title)}
+        onPress={() => confirmDeleteTask(item.id, item.title)}
       >
         <Icon name="trash-can-outline" size={24} color="#ff6b6b" />
       </TouchableOpacity>
@@ -103,7 +103,7 @@ const WorkScreen = () => {
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         <Text style={styles.title}>Work</Text>
-        
+
         <FlatList
           data={workTasks}
           renderItem={renderTask}
@@ -111,12 +111,36 @@ const WorkScreen = () => {
           style={styles.list}
           ListEmptyComponent={<Text style={styles.emptyText}>No work tasks found.</Text>}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          transparent
+          visible={showModal}
+          animationType="fade"
+          onRequestClose={() => setShowModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Delete Task</Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to delete "{taskToDelete?.title}"?
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteConfirmButton} onPress={deleteTask}>
+                  <Text style={styles.deleteConfirmButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
 };
 
-// --- Styles ---
 const NEON_BLUE = '#33ffff';
 const NEON_GREEN = '#39ff14';
 const DARK_BG = '#0d1117';
@@ -185,8 +209,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#1e252f',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    borderWidth: 1,
+    borderColor: NEON_BLUE,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: NEON_BLUE,
+    marginBottom: 10,
+  },
+  modalMessage: {
+    color: '#ccc',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  cancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 10,
+    backgroundColor: '#444',
+    borderRadius: 6,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  deleteConfirmButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#ff4c4c',
+    borderRadius: 6,
+  },
+  deleteConfirmButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
 });
 
-// --- FIX 2: Rename the export to WorkScreen ---
 export default WorkScreen;

@@ -7,14 +7,16 @@ import {
   StatusBar,
   FlatList,
   TouchableOpacity,
-  Alert
+  Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 
-const Sport= () => {
+const Sport = () => {
   const [sportTasks, setSportTasks] = useState([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   useEffect(() => {
     const authSubscriber = auth().onAuthStateChanged((user) => {
@@ -24,7 +26,6 @@ const Sport= () => {
           .orderByChild('category')
           .equalTo('Sport');
 
-        // This is where 'onValueChange' is defined with an uppercase 'C'
         const onValueChange = tasksRef.on('value', snapshot => {
           const tasksData = snapshot.val();
           if (tasksData) {
@@ -32,19 +33,13 @@ const Sport= () => {
               id: key,
               ...tasksData[key],
             })).sort((a, b) => b.createdAt - a.createdAt);
-            
             setSportTasks(filteredSportTasks);
           } else {
             setSportTasks([]);
           }
         });
 
-        // =================================================================
-        // --- THE FIX ---
-        // The variable name here now correctly matches the one above.
-        // =================================================================
         return () => tasksRef.off('value', onValueChange);
-
       } else {
         setSportTasks([]);
       }
@@ -56,22 +51,26 @@ const Sport= () => {
   const toggleTaskCompletion = (taskId, currentStatus) => {
     const user = auth().currentUser;
     if (user) {
-      database().ref(`/users/${user.uid}/tasks/${taskId}`).update({ completed: !currentStatus });
+      database()
+        .ref(`/users/${user.uid}/tasks/${taskId}`)
+        .update({ completed: !currentStatus });
     }
   };
 
-  const handleDeleteTask = (taskId, taskTitle) => {
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setDeleteModalVisible(true);
+  };
+
+  const handleConfirmDelete = () => {
     const user = auth().currentUser;
-    if (user) {
-      Alert.alert("Delete Task", `Are you sure you want to delete "${taskTitle}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          onPress: () => database().ref(`/users/${user.uid}/tasks/${taskId}`).remove(),
-          style: "destructive"
-        }
-      ]);
+    if (user && taskToDelete) {
+      database()
+        .ref(`/users/${user.uid}/tasks/${taskToDelete.id}`)
+        .remove();
     }
+    setDeleteModalVisible(false);
+    setTaskToDelete(null);
   };
 
   const renderTask = ({ item }) => (
@@ -89,14 +88,21 @@ const Sport= () => {
           <Text style={[styles.taskText, item.completed && styles.completedTaskText]}>
             {item.title}
           </Text>
-           <Text style={styles.taskDate}>
-            {item.dateTime ? new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No date'}
+          <Text style={styles.taskDate}>
+            {item.dateTime
+              ? new Date(item.dateTime).toLocaleString([], {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : 'No date'}
           </Text>
         </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={() => handleDeleteTask(item.id, item.title)}
+        onPress={() => confirmDeleteTask(item)}
       >
         <Icon name="trash-can-outline" size={24} color="#ff6b6b" />
       </TouchableOpacity>
@@ -108,7 +114,7 @@ const Sport= () => {
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         <Text style={styles.title}>Sport</Text>
-        
+
         <FlatList
           data={sportTasks}
           renderItem={renderTask}
@@ -117,6 +123,37 @@ const Sport= () => {
           ListEmptyComponent={<Text style={styles.emptyText}>No sport tasks found.</Text>}
         />
       </View>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        transparent
+        visible={deleteModalVisible}
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Task</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete "{taskToDelete?.title}"?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteConfirmButton]}
+                onPress={handleConfirmDelete}
+              >
+                <Text style={styles.deleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -195,7 +232,66 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#161b22',
+    borderRadius: 14,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: NEON_GREEN,
+    shadowColor: NEON_GREEN,
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: NEON_GREEN,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#ccc',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+  },
+  deleteConfirmButton: {
+    backgroundColor: '#ff4d4d',
+  },
+  cancelText: {
+    color: '#ccc',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default Sport;
+ 

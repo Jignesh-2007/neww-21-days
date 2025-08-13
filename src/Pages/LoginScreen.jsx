@@ -6,55 +6,68 @@ import {
   TextInput,
   TouchableOpacity,
   ImageBackground,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   SafeAreaView,
-  ActivityIndicator, // Use ActivityIndicator for loading
+  ActivityIndicator,
 } from 'react-native';
-// Import the necessary Firebase Auth functions
 import { getAuth, signInWithEmailAndPassword } from '@react-native-firebase/auth';
 
+const NEON_BLUE = '#33ffff';
+const DARK_BG = '#0d1117';
+
 const LoginScreen = ({ navigation }) => {
-  // Navigation functions
   const navigateToHome = () => {
     navigation.replace('HomeScreen');
   };
   const navigateToSignup = () => {
-    navigation.navigate('Signup');
+    navigation.replace('Signup');
   };
 
-  // State for input fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
 
-  // This is the new, secure handleLogin function
   const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    setLoading(true);
+    setEmailError('');
+    setPasswordError('');
+    setGeneralError('');
 
-    // Get the Firebase Auth instance
+    let valid = true;
+
+    if (!email.trim()) {
+      setEmailError('Enter your email');
+      valid = false;
+    } else if (!email.includes('@') || !email.includes('.')) {
+      setEmailError('Enter a valid email');
+      valid = false;
+    }
+
+    if (!password.trim()) {
+      setPasswordError('Enter your password');
+      valid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    setLoading(true);
     const authInstance = getAuth();
 
-    // Securely sign in with Firebase Authentication
     signInWithEmailAndPassword(authInstance, email, password)
-      .then((userCredential) => {
-        // Success! User is logged in.
-        console.log('User signed in successfully:', userCredential.user.uid);
+      .then(() => {
         navigateToHome();
       })
-      .catch((error) => {
-        // Failure. Handle errors.
-        console.error('Login Error:', error.code);
-        Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+      .catch(() => {
+        setGeneralError('Invalid email or password');
       })
       .finally(() => {
-        // This runs whether login succeeds or fails
         setLoading(false);
       });
   };
@@ -88,6 +101,8 @@ const LoginScreen = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+
                 <TextInput
                   style={styles.inputBox}
                   placeholder="Password"
@@ -96,22 +111,20 @@ const LoginScreen = ({ navigation }) => {
                   onChangeText={setPassword}
                   placeholderTextColor="#888"
                 />
+                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+
+                {generalError ? <Text style={styles.errorText}>{generalError}</Text> : null}
 
                 <TouchableOpacity
                   style={[styles.buttonStyle, loading && styles.buttonDisabled]}
                   onPress={handleLogin}
                   disabled={loading}
                 >
-                  {/* Show ActivityIndicator when loading */}
                   {loading ? (
                     <ActivityIndicator color={DARK_BG} />
                   ) : (
                     <Text style={styles.buttonText}>LOGIN</Text>
                   )}
-                </TouchableOpacity>
-
-                <TouchableOpacity>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
                 </TouchableOpacity>
               </View>
 
@@ -129,30 +142,12 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-const NEON_BLUE = '#33ffff';
-const DARK_BG = '#0d1117';
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: DARK_BG,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  background: {
-    flex: 1,
-    backgroundColor: DARK_BG,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  headingContainer: {
-    marginBottom: 40,
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: DARK_BG },
+  scrollContainer: { flexGrow: 1 },
+  background: { flex: 1, backgroundColor: DARK_BG },
+  container: { flex: 1, padding: 20, justifyContent: 'center' },
+  headingContainer: { marginBottom: 40, alignItems: 'center' },
   heading: {
     fontSize: 42,
     color: '#fff',
@@ -162,9 +157,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 15,
   },
-  formContainer: {
-    alignItems: 'center',
-  },
+  formContainer: { alignItems: 'center', width: '100%' },
   inputBox: {
     borderWidth: 1,
     borderColor: NEON_BLUE,
@@ -173,7 +166,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     width: '100%',
     borderRadius: 12,
-    marginBottom: 15,
     fontSize: 16,
     color: '#fff',
     shadowColor: NEON_BLUE,
@@ -181,15 +173,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 5,
     elevation: 5,
+    marginBottom: 5,
   },
+  errorText: { color: 'red', fontSize: 12, marginBottom: 10, width: '100%' },
   buttonStyle: {
     backgroundColor: NEON_BLUE,
     paddingVertical: 14,
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center', // Center the ActivityIndicator
-    minHeight: 50, // Ensure button has a consistent height
+    justifyContent: 'center',
+    minHeight: 50,
     marginTop: 10,
     shadowColor: NEON_BLUE,
     shadowOffset: { width: 0, height: 0 },
@@ -197,36 +191,12 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 15,
   },
-  buttonDisabled: {
-    backgroundColor: '#0a7575',
-    shadowOpacity: 0.5,
-    elevation: 5,
-  },
-  buttonText: {
-    color: DARK_BG,
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  forgotText: {
-    fontSize: 14,
-    color: NEON_BLUE,
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 40,
-  },
-  signText: {
-    fontSize: 15,
-    color: '#888',
-  },
-  signUpLinkText: {
-    fontSize: 15,
-    color: NEON_BLUE,
-    fontWeight: 'bold',
-  },
+  buttonDisabled: { backgroundColor: '#0a7575', shadowOpacity: 0.5, elevation: 5 },
+  buttonText: { color: DARK_BG, fontWeight: 'bold', fontSize: 18 },
+  forgotText: { fontSize: 14, color: NEON_BLUE, marginTop: 20, textAlign: 'center' },
+  signupContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },
+  signText: { fontSize: 15, color: '#888' },
+  signUpLinkText: { fontSize: 15, color: NEON_BLUE, fontWeight: 'bold' },
 });
 
 export default LoginScreen;

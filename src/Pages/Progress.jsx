@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   Modal,
   ScrollView,
   SafeAreaView,
@@ -14,11 +13,15 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import database from '@react-native-firebase/database';
 import auth from '@react-native-firebase/auth';
 
-// --- Neon-themed Task Detail Modal Component ---
+// ==== Color Constants ====
+const NEON_BLUE = '#33ffff';
+const NEON_GREEN = '#39ff14';
+const DARK_BG = '#0d1117';
+
+
+// ==== Task Detail Modal ====
 const TaskDetailModal = ({ visible, onClose, task }) => {
-  if (!task) {
-    return null;
-  }
+  if (!task) return null;
 
   const formatDate = (dateString) => {
     if (!dateString) return { date: 'Not set', time: 'Not set' };
@@ -37,7 +40,7 @@ const TaskDetailModal = ({ visible, onClose, task }) => {
 
   return (
     <Modal
-      transparent={true}
+      transparent
       visible={visible}
       animationType="fade"
       onRequestClose={onClose}
@@ -94,63 +97,104 @@ const TaskDetailModal = ({ visible, onClose, task }) => {
   );
 };
 
-// --- Main Progress Screen Component ---
+
+// ==== Delete Confirmation Modal ====
+const DeleteConfirmModal = ({ visible, onCancel, onConfirm, taskTitle }) => {
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Delete Task</Text>
+          <Text style={[styles.modalDescription, { marginBottom: 20 }]}>
+            Are you sure you want to delete "{taskTitle}"?
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#444' }]}
+              onPress={onCancel}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#ff4d4d', marginLeft: 10 }]}
+              onPress={onConfirm}
+            >
+              <Text style={styles.modalButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+
+// ==== Main Progress Component ====
 const Progress = ({ navigation }) => {
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
 
+  // Delete modal state
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
   useEffect(() => {
     const user = auth().currentUser;
     if (!user) {
-        console.log("ProgressScreen: No user logged in.");
-        setTasks([]); // Clear tasks if no user
-        return;
+      console.log("ProgressScreen: No user logged in.");
+      setTasks([]);
+      return;
     }
 
-    // --- FIX 1: Use the correct path 'users' (lowercase) ---
     const tasksRef = database().ref(`/users/${user.uid}/tasks`);
 
     const onValueChange = tasksRef.on('value', snapshot => {
       const data = snapshot.val();
       if (data) {
-        const tasksList = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key],
-        })).sort((a, b) => b.createdAt - a.createdAt); // Sort by newest first
+        const tasksList = Object.keys(data)
+          .map(key => ({
+            id: key,
+            ...data[key],
+          }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setTasks(tasksList);
-        console.log("Tasks fetched successfully for user:", user.uid);
       } else {
         setTasks([]);
-        console.log("No tasks found for user:", user.uid);
       }
     });
 
-    // Detach the listener when the component unmounts
     return () => tasksRef.off('value', onValueChange);
   }, []);
 
   const toggleTaskCompletion = (taskId, currentStatus) => {
     const user = auth().currentUser;
     if (user) {
-        // --- FIX 2: Use the correct path 'users' (lowercase) ---
-        database().ref(`/users/${user.uid}/tasks/${taskId}`).update({ completed: !currentStatus });
+      database()
+        .ref(`/users/${user.uid}/tasks/${taskId}`)
+        .update({ completed: !currentStatus });
     }
   };
 
-  const handleDeleteTask = (taskId, taskTitle) => {
+  const handleDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
     const user = auth().currentUser;
-    if (user) {
-        Alert.alert("Delete Task", `Are you sure you want to delete "${taskTitle}"?`, [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            // --- FIX 3: Use the correct path 'users' (lowercase) ---
-            onPress: () => database().ref(`/users/${user.uid}/tasks/${taskId}`).remove(),
-            style: "destructive"
-          }
-        ]);
+    if (user && taskToDelete) {
+      database()
+        .ref(`/users/${user.uid}/tasks/${taskToDelete.id}`)
+        .remove();
     }
+    setDeleteModalVisible(false);
+    setTaskToDelete(null);
   };
 
   const openTaskDetails = (task) => {
@@ -159,7 +203,15 @@ const Progress = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <View style={[styles.taskItemContainer, { borderColor: item.completed ? '#555' : NEON_BLUE, shadowColor: item.completed ? 'transparent' : NEON_BLUE }]}>
+    <View
+      style={[
+        styles.taskItemContainer,
+        {
+          borderColor: item.completed ? '#555' : NEON_BLUE,
+          shadowColor: item.completed ? 'transparent' : NEON_BLUE
+        }
+      ]}
+    >
       <TouchableOpacity
         style={styles.taskItemClickable}
         onPress={() => toggleTaskCompletion(item.id, item.completed)}
@@ -175,13 +227,21 @@ const Progress = ({ navigation }) => {
             {item.title}
           </Text>
           <Text style={styles.taskDate}>
-            {item.dateTime ? new Date(item.dateTime).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No date'}
+            {item.dateTime
+              ? new Date(item.dateTime).toLocaleString([], {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : 'No date'}
           </Text>
         </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={() => handleDeleteTask(item.id, item.title)}
+        onPress={() => handleDeleteTask(item)}
       >
         <Icon name="trash-can-outline" size={24} color="#ff6b6b" />
       </TouchableOpacity>
@@ -193,7 +253,12 @@ const Progress = ({ navigation }) => {
       <Text style={styles.header}>Progress</Text>
       {tasks.length === 0 ? (
         <View style={styles.emptyState}>
-          <Icon name="clipboard-list-outline" size={80} color={NEON_BLUE} style={styles.iconShadow} />
+          <Icon
+            name="clipboard-list-outline"
+            size={80}
+            color={NEON_BLUE}
+            style={styles.iconShadow}
+          />
           <Text style={styles.emptyText}>No tasks added yet!</Text>
         </View>
       ) : (
@@ -209,14 +274,18 @@ const Progress = ({ navigation }) => {
         onClose={() => setDetailModalVisible(false)}
         task={selectedTask}
       />
+      <DeleteConfirmModal
+        visible={isDeleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        onConfirm={confirmDelete}
+        taskTitle={taskToDelete?.title}
+      />
     </SafeAreaView>
   );
 };
 
-const NEON_BLUE = '#33ffff';
-const NEON_GREEN = '#39ff14';
-const DARK_BG = '#0d1117';
 
+// ==== Styles ====
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -359,6 +428,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     marginLeft: 15,
+  },
+  modalButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

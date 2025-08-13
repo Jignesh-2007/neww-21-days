@@ -7,34 +7,42 @@ import {
   StatusBar,
   FlatList,
   TouchableOpacity,
-  Alert
+  Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 
+const NEON_PURPLE = '#f7b3ff';
+const COMPLETED_GREEN = '#2ecc71';
+const DARK_BG = '#0d1117';
+
 const Music = () => {
-  // 1. Create state to hold the list of music-related tasks
   const [musicTasks, setMusicTasks] = useState([]);
 
-  // 2. Use useEffect to fetch data when the screen loads
+  // Modal state
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
+  // Fetch music category tasks
   useEffect(() => {
     const authSubscriber = auth().onAuthStateChanged((user) => {
       if (user) {
-        // 3. Create a query to get ONLY tasks where category is 'Music'
         const tasksRef = database()
           .ref(`/users/${user.uid}/tasks`)
           .orderByChild('category')
-          .equalTo('Music'); // <-- The main change for this screen
+          .equalTo('Music');
 
         const onValueChange = tasksRef.on('value', snapshot => {
           const tasksData = snapshot.val();
           if (tasksData) {
-            const filteredMusicTasks = Object.keys(tasksData).map(key => ({
-              id: key,
-              ...tasksData[key],
-            })).sort((a, b) => b.createdAt - a.createdAt);
-            
+            const filteredMusicTasks = Object.keys(tasksData)
+              .map(key => ({
+                id: key,
+                ...tasksData[key],
+              }))
+              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
             setMusicTasks(filteredMusicTasks);
           } else {
             setMusicTasks([]);
@@ -50,30 +58,37 @@ const Music = () => {
     return authSubscriber;
   }, []);
 
-  // --- Helper functions for completing and deleting tasks ---
-
+  // Toggle completion
   const toggleTaskCompletion = (taskId, currentStatus) => {
     const user = auth().currentUser;
     if (user) {
-      database().ref(`/users/${user.uid}/tasks/${taskId}`).update({ completed: !currentStatus });
+      database()
+        .ref(`/users/${user.uid}/tasks/${taskId}`)
+        .update({ completed: !currentStatus });
     }
   };
 
-  const handleDeleteTask = (taskId, taskTitle) => {
-    const user = auth().currentUser;
-    if (user) {
-      Alert.alert("Delete Task", `Are you sure you want to delete "${taskTitle}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          onPress: () => database().ref(`/users/${user.uid}/tasks/${taskId}`).remove(),
-          style: "destructive"
-        }
-      ]);
-    }
+  // Open delete modal
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setIsDeleteModalVisible(true);
   };
 
-  // 4. This function defines how each task in the list will look
+  // Actually delete
+  const deleteTask = () => {
+    if (taskToDelete) {
+      const user = auth().currentUser;
+      if (user) {
+        database()
+          .ref(`/users/${user.uid}/tasks/${taskToDelete.id}`)
+          .remove();
+      }
+    }
+    setIsDeleteModalVisible(false);
+    setTaskToDelete(null);
+  };
+
+  // Render each task
   const renderTask = ({ item }) => (
     <View style={[styles.taskCard, { borderColor: item.completed ? '#555' : NEON_PURPLE }]}>
       <TouchableOpacity
@@ -83,20 +98,27 @@ const Music = () => {
         <Icon
           name={item.completed ? 'check-circle' : 'checkbox-blank-circle-outline'}
           size={28}
-          color={item.completed ? COMPLETED_GREEN : NEON_PURPLE} // <-- Using NEON_PURPLE for the theme
+          color={item.completed ? COMPLETED_GREEN : NEON_PURPLE}
         />
         <View style={styles.taskTextContainer}>
           <Text style={[styles.taskText, item.completed && styles.completedTaskText]}>
             {item.title}
           </Text>
-           <Text style={styles.taskDate}>
-            {item.dateTime ? new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No date'}
+          <Text style={styles.taskDate}>
+            {item.dateTime
+              ? new Date(item.dateTime).toLocaleString([], {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : 'No date'}
           </Text>
         </View>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={() => handleDeleteTask(item.id, item.title)}
+        onPress={() => confirmDeleteTask(item)}
       >
         <Icon name="trash-can-outline" size={24} color="#ff6b6b" />
       </TouchableOpacity>
@@ -108,8 +130,7 @@ const Music = () => {
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         <Text style={styles.title}>Music</Text>
-        
-        {/* 5. Use FlatList to display the tasks */}
+
         <FlatList
           data={musicTasks}
           renderItem={renderTask}
@@ -117,15 +138,47 @@ const Music = () => {
           style={styles.list}
           ListEmptyComponent={<Text style={styles.emptyText}>No music tasks found.</Text>}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          visible={isDeleteModalVisible}
+          transparent
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Delete Task</Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to delete{" "}
+                <Text style={{ fontWeight: 'bold', color: NEON_PURPLE }}>
+                  {taskToDelete?.title}
+                </Text>
+                ?
+              </Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#555' }]}
+                  onPress={() => {
+                    setIsDeleteModalVisible(false);
+                    setTaskToDelete(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#ff6b6b' }]}
+                  onPress={deleteTask}
+                >
+                  <Text style={styles.modalButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
 };
-
-// --- Styles ---
-const NEON_PURPLE = '#f7b3ff';
-const COMPLETED_GREEN = '#2ecc71';
-const DARK_BG = '#0d1117';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -196,7 +249,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 14,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: NEON_PURPLE,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: NEON_PURPLE,
+    marginBottom: 10,
+  },
+  modalMessage: {
+    color: '#ddd',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
 
 export default Music;

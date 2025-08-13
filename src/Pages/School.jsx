@@ -7,14 +7,16 @@ import {
   StatusBar,
   FlatList,
   TouchableOpacity,
-  Alert // <-- Import Alert for the delete confirmation
+  Modal
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // <-- Import Icon for the checkmark and trash can
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 
-const School= () => {
+const School = () => {
   const [schoolTasks, setSchoolTasks] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   useEffect(() => {
     const authSubscriber = auth().onAuthStateChanged((user) => {
@@ -30,7 +32,7 @@ const School= () => {
             const filteredSchoolTasks = Object.keys(tasksData).map(key => ({
               id: key,
               ...tasksData[key],
-            })).sort((a, b) => b.createdAt - a.createdAt); // Sort by newest first
+            })).sort((a, b) => b.createdAt - a.createdAt);
             
             setSchoolTasks(filteredSchoolTasks);
           } else {
@@ -47,10 +49,6 @@ const School= () => {
     return authSubscriber;
   }, []);
 
-  // =================================================================
-  // --- 1. ADD HELPER FUNCTIONS FOR COMPLETING AND DELETING ---
-  // =================================================================
-
   const toggleTaskCompletion = (taskId, currentStatus) => {
     const user = auth().currentUser;
     if (user) {
@@ -58,27 +56,22 @@ const School= () => {
     }
   };
 
-  const handleDeleteTask = (taskId, taskTitle) => {
-    const user = auth().currentUser;
-    if (user) {
-      Alert.alert("Delete Task", `Are you sure you want to delete "${taskTitle}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          onPress: () => database().ref(`/users/${user.uid}/tasks/${taskId}`).remove(),
-          style: "destructive"
-        }
-      ]);
-    }
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setModalVisible(true);
   };
 
-  // =================================================================
-  // --- 2. UPDATE THE RENDER FUNCTION TO INCLUDE NEW UI ---
-  // =================================================================
+  const deleteTask = () => {
+    const user = auth().currentUser;
+    if (user && taskToDelete) {
+      database().ref(`/users/${user.uid}/tasks/${taskToDelete.id}`).remove();
+    }
+    setModalVisible(false);
+    setTaskToDelete(null);
+  };
 
   const renderTask = ({ item }) => (
     <View style={[styles.taskCard, { borderColor: item.completed ? '#555' : NEON_PINK }]}>
-      {/* Main clickable area to complete the task */}
       <TouchableOpacity
         style={styles.taskItemClickable}
         onPress={() => toggleTaskCompletion(item.id, item.completed)}
@@ -86,22 +79,28 @@ const School= () => {
         <Icon
           name={item.completed ? 'check-circle' : 'checkbox-blank-circle-outline'}
           size={28}
-          color={item.completed ? NEON_GREEN : NEON_PINK} // <-- Using NEON_PINK for the theme
+          color={item.completed ? NEON_GREEN : NEON_PINK}
         />
         <View style={styles.taskTextContainer}>
           <Text style={[styles.taskText, item.completed && styles.completedTaskText]}>
             {item.title}
           </Text>
-           <Text style={styles.taskDate}>
-            {item.dateTime ? new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No date'}
+          <Text style={styles.taskDate}>
+            {item.dateTime
+              ? new Date(item.dateTime).toLocaleString([], {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : 'No date'}
           </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Separate button for deleting the task */}
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={() => handleDeleteTask(item.id, item.title)}
+        onPress={() => confirmDeleteTask(item)}
       >
         <Icon name="trash-can-outline" size={24} color="#ff6b6b" />
       </TouchableOpacity>
@@ -113,7 +112,7 @@ const School= () => {
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         <Text style={styles.title}>School</Text>
-        
+
         <FlatList
           data={schoolTasks}
           renderItem={renderTask}
@@ -121,20 +120,46 @@ const School= () => {
           style={styles.list}
           ListEmptyComponent={<Text style={styles.emptyText}>No school tasks found.</Text>}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          transparent
+          animationType="fade"
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Delete Task</Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to delete "{taskToDelete?.title}"?
+              </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.deleteButtonModal]}
+                  onPress={deleteTask}
+                >
+                  <Text style={styles.deleteText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
 };
 
-// --- Styles ---
 const NEON_PINK = '#ff33ff';
-const NEON_GREEN = '#39ff14'; // Color for completed tasks
+const NEON_GREEN = '#39ff14';
 const DARK_BG = '#0d1117';
 
-
-// =================================================================
-// --- 3. ADD NEW STYLES FOR THE UPDATED UI ---
-// =================================================================
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -204,7 +229,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#161b22',
+    borderRadius: 14,
+    padding: 20,
+    width: '80%',
+    borderWidth: 1,
+    borderColor: NEON_PINK,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: NEON_PINK,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+  },
+  deleteButtonModal: {
+    backgroundColor: '#ff4d4d',
+  },
+  cancelText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  deleteText: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });
 
 export default School;

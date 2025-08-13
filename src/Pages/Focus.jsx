@@ -62,6 +62,20 @@ const Focus = () => {
         setSeconds(DURATION[m]);
     };
 
+    // --- THIS IS THE NEW FUNCTION ---
+    // Adjust time by a given amount of seconds
+    const adjustTime = (amount) => {
+        // Stop the timer if it's running
+        if (active) {
+            toggle();
+        }
+        setSeconds(prev => {
+            const newTime = prev + amount;
+            // Ensure time doesn't go below zero
+            return newTime > 0 ? newTime : 0;
+        });
+    };
+
     return (
         <View style={styles.container}>
             <Video
@@ -78,14 +92,12 @@ const Focus = () => {
                     style={[styles.modeBtn, mode === 'pomodoro' && styles.selected]}
                     onPress={() => changeMode('pomodoro')}
                 >
-                    {/* FIX: Add paddingHorizontal to modeText */}
                     <Text style={[styles.modeText, { paddingHorizontal: 1 }]}>pomodoro</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.modeBtn, mode === 'short' && styles.selected]}
                     onPress={() => changeMode('short')}
                 >
-                    {/* FIX: Add paddingHorizontal to modeText */}
                     <Text style={[styles.modeText, { paddingHorizontal: 1 }]}>short break</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -110,12 +122,14 @@ const Focus = () => {
                 </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.incTime}>
+            {/* --- UPDATED BUTTON --- */}
+            <TouchableOpacity style={styles.incTime} onPress={() => adjustTime(5 * 60)}>
                 <Ionicons name="add-circle" color="#000" size={24} />
                 <Text style={styles.addmintext}>5 Min</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.decTime}>
+            {/* --- UPDATED BUTTON --- */}
+            <TouchableOpacity style={styles.decTime} onPress={() => adjustTime(-5 * 60)}>
                 <Ionicons name="remove-circle" color="#000" size={24} />
                 <Text style={styles.addmintext}>5 Mins</Text>
             </TouchableOpacity>
